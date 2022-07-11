@@ -18,34 +18,42 @@ namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 //pathes
-#define STATUS_PATH  "c:\\DecentrWG_config\\WG_status.json"
-#define CONFIG_PATH  "c:\\DecentrWG_config\\wg98.conf"
-#define WG_HOST_PATH "c:\\DecentrWG_config\\WG_decentr_host.exe"
-#define LOG_PATH     "c:\\DecentrWG_config\\WG_log.txt"
-
-//wireguard commands
-#define WG_SHOW     "wg show"
-#define UNINSTALL_TUNNEL_COMMAND "wireguard /uninstalltunnelservice wg98"
+#define STATUS_PATH     "c:\\DecentrWG_config\\WG_status.json"
+#define CONFIG_PATH     "c:\\DecentrWG_config\\wg98.conf"
+#define WG_HOST_PATH    "c:\\DecentrWG_config\\WG_decentr_host.exe"
+#define LOG_PATH        "c:\\DecentrWG_config\\WG_log.txt"
 #define WIRE_GUARD_PATH "c:\\DecentrWG"
 
-int setenv(const char* name, const char* value, int overwrite);
+//commands
+#define INSTALL_TUNNEL      "install_wg_tunnel"
+#define UNINSTALL_TUNNEL    "uninstall_wg_tunnel"
+#define IS_TUNNEL_INSTALLED "is_wgTunnel_installed"
+#define STOP                "stop"
+
+//responses
+#define UNDEFINED_ERROR_RESPONSE    "undefined_error"
+#define INSTALLED_RESPONSE          "installed"
+#define UNINSTALLED_RESPONSE        "uninstalled"
+#define EXITED_RESPONSE             "exited"
+
+//communicative files pathes (process with admin access communicate with this nonadmin process via these files)
+const fs::path response_file{ "c:\\DecentrWG_config\\response.rspn" };
+const fs::path request_file_path{ "c:\\DecentrWG_config\\request.rqst" };
 
 bool disconnectActiveConnection();
 bool connectToVPN();
 bool isWG_installed();
 bool isVPN_TunnelInstalled();
-
-
+void writeCommandToRequestFile(const std::string request);
+std::string getResponse();
 
 
 int main()
 {
-   
-   
-       // set path for wireguard and wg
-       setenv("Path", WIRE_GUARD_PATH, 1);
-   
-        // length of the input and output message
+       //hide this window
+	  // HWND hWin = GetForegroundWindow();
+	  // ShowWindow(hWin, SW_HIDE);
+	   // length of the input and output message
         unsigned long inLength = 0, outLength = 0;
         // in/out message
         std::string inMessage, outMessage;
@@ -119,8 +127,6 @@ int main()
                         configFile.close();
 
 
-                        // first uninstall tunnel service if it is installed
-                        disconnectActiveConnection();
 
                         if (connectToVPN()) {
 
@@ -229,65 +235,56 @@ int main()
 
 bool disconnectActiveConnection() {
     
-    int result = -1;
-    if(isVPN_TunnelInstalled()) result = system(UNINSTALL_TUNNEL_COMMAND);
-    Sleep(100);
-    bool isDisconnected = false;
-    result == 0 ? isDisconnected = true:isDisconnected = false;
-    return isDisconnected;
+	writeCommandToRequestFile(UNINSTALL_TUNNEL);
+	std::string response = getResponse();
+	if (response == UNINSTALLED_RESPONSE)return true;
+	return false;
 }
 
 bool connectToVPN() {
 
-    std::string installTunnelCommand = "wireguard /installtunnelservice ";
-    installTunnelCommand.append(fs::current_path().string());
-    installTunnelCommand.append("\\wg98.conf");
-    const char* command = installTunnelCommand.c_str();
-    bool isTunnelInstalled = false;
-    int result = -1;
-    result = std::system(command);
-    result == 0 ? isTunnelInstalled = true : isTunnelInstalled = false;
-    return isTunnelInstalled;
+	writeCommandToRequestFile(INSTALL_TUNNEL);
+	std::string response = getResponse();
+	if(response == INSTALLED_RESPONSE)return true;
+    return false;
 }
 
-int setenv(const char* name, const char* value, int overwrite)
-{
-    char* libvar;
-    size_t requiredSize;
-
-    getenv_s(&requiredSize, NULL, 0, "Path");
-    if (requiredSize == 0)
-    {
-        exit(1);
-    }
-
-    libvar = (char*)malloc(requiredSize * sizeof(char));
-    if (!libvar)
-    {
-        exit(1);
-    }
-
-    return _putenv_s(name, value);
-
-}
 
 bool isWG_installed() {
 
     if (fs::exists(WIRE_GUARD_PATH) && fs::exists(WG_HOST_PATH))
         return true;
     return false;
-
 }
 
 bool isVPN_TunnelInstalled(){
    
-    StdCapture stdc;
-    stdc.BeginCapture();
-    system(WG_SHOW);   
-    stdc.EndCapture();
-    std::string response = stdc.GetCapture();
-    if (!response.empty())return true;
-    return false;
+	writeCommandToRequestFile(IS_TUNNEL_INSTALLED);
+	std::string response = getResponse();
+	if (response == INSTALLED_RESPONSE)return true;
+	return false;
+}
 
+void writeCommandToRequestFile(const std::string request)
+{
+	std::ofstream requestFile;
+	requestFile.open(response_file, std::ios::trunc);
+	requestFile << request;
+	requestFile.close();
+}
+
+std::string getResponse()
+{
+	while(!fs::exists(response_file)){
+	Sleep(100);
+	}
+	std::string response;
+	std::ifstream responseFile(request_file_path.string());
+	if (responseFile.is_open()){
+		std::getline(responseFile, response);
+	}
+	responseFile.close();
+	fs::remove(response_file);
+	return response;
 }
 
