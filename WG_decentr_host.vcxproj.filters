@@ -26,8 +26,13 @@
     <ClInclude Include="getport.hpp">
       <Filter>Исходные файлы</Filter>
     </ClInclude>
-    <ClInclude Include="StdCapture.h">
-      <Filter>Исходные файлы</Filter>
+    <ClInclude Include="resource.h">
+      <Filter>Файлы заголовков</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="WG_decentr_host.rc">
+      <Filter>Файлы ресурсов</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

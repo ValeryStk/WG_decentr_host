@@ -2,10 +2,11 @@
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sstream>
 #include <fstream>
 #include "json.hpp"
 #include "getport.hpp"
-#include <sstream>
+
 #include <filesystem>
 #include <algorithm>
 #include <windows.h>
@@ -22,9 +23,10 @@ using json = nlohmann::json;
 #define LOG_PATH     "c:\\DecentrWG_config\\WG_log.txt"
 
 //wireguard commands
-#define WG_SHOW     "wg show"
+#define WG_SHOW                  "wg show"
 #define UNINSTALL_TUNNEL_COMMAND "wireguard /uninstalltunnelservice wg98"
-#define WIRE_GUARD_PATH "c:\\DecentrWG"
+#define INSTALL_TUNNEL_COMMAND   "wireguard /installtunnelservice c:\\DecentrWG_config\\wg98.conf"
+#define WIRE_GUARD_PATH          "c:\\DecentrWG"
 
 int setenv(const char* name, const char* value, int overwrite);
 
@@ -95,7 +97,7 @@ int main()
                 }
                 else{
                     
-                    uint16_t port =  52487;//GetFreeUDPPort()
+                    uint16_t port =  GetFreeUDPPort();
                     logFile << "Port: " << port << std::endl;
                     
                     json params = message["params"];
@@ -157,7 +159,7 @@ int main()
                         outMessage_ss << "{\"result\":true, \"response\":" + line + "}";
                     }
                     else {
-                        outMessage_ss << "{\"result\":false}";
+                        outMessage_ss << "{\"result\":true}";
                     }
                                       
                 }
@@ -217,6 +219,7 @@ int main()
 
     // a bit of logging
     logFile << "Sent: " << outMessage_ss.str() << std::endl;
+	logFile <<"******************************"<<std::endl<<std::endl;
     logFile.close();
 
     return EXIT_SUCCESS;
@@ -225,24 +228,21 @@ int main()
 bool disconnectActiveConnection() {
     
     int result = -1;
-    if(isVPN_TunnelInstalled()) result = system(UNINSTALL_TUNNEL_COMMAND);
-    Sleep(100);
-    bool isDisconnected = false;
-    result == 0 ? isDisconnected = true:isDisconnected = false;
-    return isDisconnected;
+	if(isVPN_TunnelInstalled()) {
+		result = system(UNINSTALL_TUNNEL_COMMAND);
+		Sleep(100);
+		if(result == EXIT_SUCCESS) return true;
+		return false;
+	};
+    return true;
 }
 
 bool connectToVPN() {
 
-    std::string installTunnelCommand = "wireguard /installtunnelservice ";
-    installTunnelCommand.append(fs::current_path().string());
-    installTunnelCommand.append("\\wg98.conf");
-    const char* command = installTunnelCommand.c_str();
-    bool isTunnelInstalled = false;
     int result = -1;
-    result = std::system(command);
-    result == 0 ? isTunnelInstalled = true : isTunnelInstalled = false;
-    return isTunnelInstalled;
+    result = std::system(INSTALL_TUNNEL_COMMAND);
+    if(result == EXIT_SUCCESS) return true;
+    return false;
 }
 
 int setenv(const char* name, const char* value, int overwrite)
@@ -270,8 +270,8 @@ int setenv(const char* name, const char* value, int overwrite)
 
 bool isWG_installed() {
 
-    if (fs::exists(WIRE_GUARD_PATH) && fs::exists(WG_HOST_PATH))
-        return true;
+    if (fs::exists(WIRE_GUARD_PATH))return true;
+	else
     return false;
 
 }
@@ -280,11 +280,40 @@ bool isVPN_TunnelInstalled(){
    
     StdCapture stdc;
     stdc.BeginCapture();
-    system(WG_SHOW);   
+    system(WG_SHOW);//async executing
+	Sleep(50);
     stdc.EndCapture();
     std::string response = stdc.GetCapture();
     if (!response.empty())return true;
+	else
     return false;
 
+}
+
+//function for capturing system result to string
+std::string ssystem(const char* command) {
+
+	char tmpname[L_tmpnam];
+	std::tmpnam(tmpname);
+	std::string scommand = command;
+	std::string cmd = scommand + " >> " + tmpname;
+	std::system(cmd.c_str());
+	std::ifstream file(tmpname, std::ios::in | std::ios::binary);
+	std::string result;
+	if (file) {
+		while (!file.eof()) result.push_back(file.get());
+		file.close();
+	}
+	remove(tmpname);
+
+	std::istringstream iss(result);
+	std::string line;
+	std::string allResponse = "";
+	while (std::getline(iss, line))
+	{
+		allResponse = allResponse + line + "\n";
+	}
+
+	return allResponse;
 }
 
