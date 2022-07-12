@@ -34,14 +34,18 @@ bool disconnectActiveConnection();
 bool connectToVPN();
 bool isWG_installed();
 bool isVPN_TunnelInstalled();
+std::string ssystem(const char* command);
 
 
 
 int main()
 {
-    
+
     // set path for wireguard and wg
     setenv("Path", WIRE_GUARD_PATH, 1);
+
+
+	isVPN_TunnelInstalled();
     
     // length of the input and output message
     unsigned long inLength = 0, outLength = 0;
@@ -278,12 +282,10 @@ bool isWG_installed() {
 
 bool isVPN_TunnelInstalled(){
    
-    StdCapture stdc;
-    stdc.BeginCapture();
-    system(WG_SHOW);//async executing
-	Sleep(50);
-    stdc.EndCapture();
-    std::string response = stdc.GetCapture();
+
+	std::string response = ssystem(WG_SHOW);
+	Sleep(50);//async executing
+   
     if (!response.empty())return true;
 	else
     return false;
@@ -299,21 +301,14 @@ std::string ssystem(const char* command) {
 	std::string cmd = scommand + " >> " + tmpname;
 	std::system(cmd.c_str());
 	std::ifstream file(tmpname, std::ios::in | std::ios::binary);
-	std::string result;
+	std::string result = "";
 	if (file) {
 		while (!file.eof()) result.push_back(file.get());
 		file.close();
 	}
 	remove(tmpname);
 
-	std::istringstream iss(result);
-	std::string line;
-	std::string allResponse = "";
-	while (std::getline(iss, line))
-	{
-		allResponse = allResponse + line + "\n";
-	}
-
-	return allResponse;
+	if(result.length()==1)result = "";
+	return result;
 }
 
