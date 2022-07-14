@@ -44,8 +44,6 @@ int main()
     // set path for wireguard and wg
     setenv("Path", WIRE_GUARD_PATH, 1);
 
-
-	isVPN_TunnelInstalled();
     
     // length of the input and output message
     unsigned long inLength = 0, outLength = 0;
