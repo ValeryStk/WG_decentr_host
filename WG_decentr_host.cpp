@@ -55,13 +55,13 @@ int main()
     json message;
 
     // a bit of logging
-    std::ofstream logFile;
-    logFile.open("MessagingLog.txt", std::ios::app);
+    //std::ofstream logFile;
+    //logFile.open("MessagingLog.txt", std::ios::app);
 
     // read the first four bytes (length of input message
     for (int index = 0; index < 4; index++) { unsigned int read_char = getchar(); inLength = inLength | (read_char << index * 8); }
 
-    logFile << "Length: " << inLength << std::endl;
+    //logFile << "Length: " << inLength << std::endl;
 
     // read the message form the extension
     for (int index = 0; index < (int)inLength; index++) { inMessage += getchar(); }
@@ -77,14 +77,14 @@ int main()
 
     //inMessage = R"({"type":"wgInstall"})";
 
-    logFile << "Received: " << inMessage << std::endl;  
+    //logFile << "Received: " << inMessage << std::endl;  
     inMessage.erase(std::remove(inMessage.begin(), inMessage.end(), '\\'), inMessage.end());
     
     try
     {
-        logFile << "Is valid json: " << std::boolalpha << json::accept(inMessage) << std::endl;
+        //logFile << "Is valid json: " << std::boolalpha << json::accept(inMessage) << std::endl;
         message = json::parse(inMessage);
-        logFile << "JSON: " << message.dump() << std::endl;
+        //logFile << "JSON: " << message.dump() << std::endl;
 
         if (message.find("type") == message.end()){
 
@@ -102,7 +102,7 @@ int main()
                 else{
                     
                     uint16_t port =  GetFreeUDPPort();
-                    logFile << "Port: " << port << std::endl;
+                    //logFile << "Port: " << port << std::endl;
                     
                     json params = message["params"];
                     // create config file
@@ -208,7 +208,7 @@ int main()
     catch (json::exception& e)
     {
         // output exception information
-        logFile << "JSON exception: " << e.what() << ", exception id: " << e.id;
+        //logFile << "JSON exception: " << e.what() << ", exception id: " << e.id;
         outMessage_ss << "{\"error\":\"json exception\"}";
 
     }
@@ -222,9 +222,9 @@ int main()
     std::cout << outMessage_ss.str() << std::flush;
 
     // a bit of logging
-    logFile << "Sent: " << outMessage_ss.str() << std::endl;
-	logFile <<"******************************"<<std::endl<<std::endl;
-    logFile.close();
+    //logFile << "Sent: " << outMessage_ss.str() << std::endl;
+	//logFile <<"******************************"<<std::endl<<std::endl;
+    //logFile.close();
 
     return EXIT_SUCCESS;
 }
