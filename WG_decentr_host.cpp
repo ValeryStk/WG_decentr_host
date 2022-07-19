@@ -6,49 +6,59 @@
 #include <fstream>
 #include "json.hpp"
 #include "getport.hpp"
-
 #include <filesystem>
 #include <algorithm>
 #include <windows.h>
 #include <tchar.h>
 #include "StdCapture.h"
+#include "windows.h"
+#include "ShellAPI.h"
+#include <chrono>
+using namespace std::chrono;
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 //pathes
-#define STATUS_PATH  "c:\\DecentrWG_config\\WG_status.json"
-#define CONFIG_PATH  "c:\\DecentrWG_config\\wg98.conf"
-#define WG_HOST_PATH "c:\\DecentrWG_config\\WG_decentr_host.exe"
-#define LOG_PATH     "c:\\DecentrWG_config\\WG_log.txt"
+#define STATUS_PATH      "c:\\DecentrWG_config\\WG_status.json"
+#define CONFIG_PATH      "c:\\DecentrWG_config\\wg98.conf"
+#define WG_HOST_PATH     "c:\\DecentrWG_config\\WG_decentr_host.exe"
+#define LOG_PATH         "c:\\DecentrWG_config\\WG_log.txt"
+#define WIRE_GUARD_PATH  "c:\\DecentrWG"
 
-//wireguard commands
-#define WG_SHOW                  "wg show"
-#define UNINSTALL_TUNNEL_COMMAND "wireguard /uninstalltunnelservice wg98"
-#define INSTALL_TUNNEL_COMMAND   "wireguard /installtunnelservice c:\\DecentrWG_config\\wg98.conf"
-#define WIRE_GUARD_PATH          "c:\\DecentrWG"
+//responses
+#define UNDEFINED_ERROR_RESPONSE    "undefined_error"
+#define INSTALLED_RESPONSE          "installed"
+#define UNINSTALLED_RESPONSE        "uninstalled"
+#define EXITED_RESPONSE             "exited"
 
-int setenv(const char* name, const char* value, int overwrite);
+//requests
+#define WG_SHOW                     "is_wgTunnel_installed"
+#define UNINSTALL_TUNNEL_COMMAND    "uninstall_wg_tunnel"
+#define INSTALL_TUNNEL_COMMAND      "install_wg_tunnel"
+
+//communicative files pathes
+const fs::path response_file     {"c:\\DecentrWG_config\\response.rspn"};
+const fs::path request_file_path {"c:\\DecentrWG_config\\request.rqst"};
+
 
 bool disconnectActiveConnection();
 bool connectToVPN();
 bool isWG_installed();
 bool isVPN_TunnelInstalled();
-std::string ssystem(const char* command);
+
+void writeRequestFile(const std::string &request);
+std::string waitForResponse();
 
 
 
 int main()
 {
-
-    // set path for wireguard and wg
-    setenv("Path", WIRE_GUARD_PATH, 1);
-
-
-	isVPN_TunnelInstalled();
-    
-    // length of the input and output message
+ 
+	
+	// length of the input and output message
     unsigned long inLength = 0, outLength = 0;
+
     // in/out message
     std::string inMessage, outMessage;
     std::stringstream outMessage_ss;
@@ -61,24 +71,24 @@ int main()
     // read the first four bytes (length of input message
     for (int index = 0; index < 4; index++) { unsigned int read_char = getchar(); inLength = inLength | (read_char << index * 8); }
 
-    //logFile << "Length: " << inLength << std::endl;
+   // logFile << "Length: " << inLength << std::endl;
 
     // read the message form the extension
     for (int index = 0; index < (int)inLength; index++) { inMessage += getchar(); }
 
     
     //inMessage = R"({"type":"connect","params": {"ipV4":"10.8.0.3","ipV6":"fd86:ea04:1115:0000:0000:0000:0000:0003","host":"170.187.141.223","port":61409,"hostPublicKey":"BS9Iuy+1LH/Z9uZXUD9FUzb8P9TFnZ4IIfWKxoMMM08=","wgPrivateKey":"UG7PflH9H0OLnrGdprx2WwQ0/YiFJRKe7oRaOivK6l0=","address":"sent1tet7xxem50t6hxfh605ge3r30mau7gl9kd820n","sessionId":55680,"nodeAddress":"sentnode1yfwfsky2usqudsnx7t6xhx4xqsz79zu2va8fws"}})";
-
     //inMessage = R"({"type":"status"})";
-
     //inMessage = R"({"type":"disconnect"})";
-
     //inMessage = R"({"type":"isWgInstalled"})";
-
     //inMessage = R"({"type":"wgInstall"})";
+	
 
     //logFile << "Received: " << inMessage << std::endl;  
     inMessage.erase(std::remove(inMessage.begin(), inMessage.end(), '\\'), inMessage.end());
+
+	
+	
     
     try
     {
@@ -224,53 +234,33 @@ int main()
     // a bit of logging
     //logFile << "Sent: " << outMessage_ss.str() << std::endl;
 	//logFile <<"******************************"<<std::endl<<std::endl;
-    //logFile.close();
+   // logFile.close();
+
+	//lockStream.close();
+	//fs::remove(mutex_file_path);
 
     return EXIT_SUCCESS;
 }
 
 bool disconnectActiveConnection() {
     
-    int result = -1;
-	if(isVPN_TunnelInstalled()) {
-		result = system(UNINSTALL_TUNNEL_COMMAND);
-		Sleep(100);
-		if(result == EXIT_SUCCESS) return true;
-		return false;
-	};
-    return true;
+    std::string result = "";	
+    writeRequestFile(UNINSTALL_TUNNEL_COMMAND);
+    result = waitForResponse();
+	if(result == UNINSTALLED_RESPONSE) return true;
+	return false;
+
 }
 
 bool connectToVPN() {
 
-    int result = -1;
-    result = std::system(INSTALL_TUNNEL_COMMAND);
-    if(result == EXIT_SUCCESS) return true;
+    std::string result = "";
+    writeRequestFile(INSTALL_TUNNEL_COMMAND);
+	result = waitForResponse();
+    if(result == INSTALLED_RESPONSE) return true;
     return false;
 }
 
-int setenv(const char* name, const char* value, int overwrite)
-{
-    char* libvar;
-    size_t requiredSize;
-
-    getenv_s(&requiredSize, NULL, 0, "Path");
-    if (requiredSize == 0)
-    {
-        printf("LIB doesn't exist!\n");
-        exit(1);
-    }
-
-    libvar = (char*)malloc(requiredSize * sizeof(char));
-    if (!libvar)
-    {
-        printf("Failed to allocate memory!\n");
-        exit(1);
-    }
-
-    return _putenv_s(name, value);
-
-}
 
 bool isWG_installed() {
 
@@ -283,32 +273,57 @@ bool isWG_installed() {
 bool isVPN_TunnelInstalled(){
    
 
-	std::string response = ssystem(WG_SHOW);
-	Sleep(50);//async executing
-   
-    if (!response.empty())return true;
+	writeRequestFile(WG_SHOW);
+	std::string response = waitForResponse();
+    if (response == INSTALLED_RESPONSE)return true;
 	else
     return false;
 
 }
 
-//function for capturing system result to string
-std::string ssystem(const char* command) {
 
-	char tmpname[L_tmpnam];
-	std::tmpnam(tmpname);
-	std::string scommand = command;
-	std::string cmd = scommand + " >> " + tmpname;
-	std::system(cmd.c_str());
-	std::ifstream file(tmpname, std::ios::in | std::ios::binary);
-	std::string result = "";
-	if (file) {
-		while (!file.eof()) result.push_back(file.get());
-		file.close();
+void writeRequestFile(const std::string& request)
+{
+	std::ofstream requestFile(request_file_path, std::ios::trunc);
+	if(requestFile.is_open()){
+	requestFile << request;
+	requestFile.close();
 	}
-	remove(tmpname);
+}
 
-	if(result.length()==1)result = "";
-	return result;
+std::string waitForResponse()
+{
+	auto start = high_resolution_clock::now();
+	while(!fs::exists(response_file)){
+	
+		Sleep(20);
+		auto stop = high_resolution_clock::now();
+	    auto duration = duration_cast<seconds>(stop - start);
+		if (duration.count() > 10) {//if coommunicator doesn't response ---> exit after 10 seconds 
+			Beep(500,500);
+			exit(0);
+		};
+
+	}
+    
+	std::string response = "";
+	std::ifstream responseFile(response_file);
+	if(responseFile.is_open()){
+	std::getline(responseFile, response);
+    responseFile.close();
+
+	   try{
+
+		fs::remove(response_file);
+
+	   }catch(fs::filesystem_error e){
+	      response = e.what();
+	      Beep(1000,1000);
+	   }
+
+
+	}
+	
+	return response;
 }
 
