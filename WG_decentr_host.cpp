@@ -265,20 +265,16 @@ bool connectToVPN() {
 bool isWG_installed() {
 
     if (fs::exists(WIRE_GUARD_PATH))return true;
-	else
     return false;
 
 }
 
 bool isVPN_TunnelInstalled(){
    
-
 	writeRequestFile(WG_SHOW);
 	std::string response = waitForResponse();
     if (response == INSTALLED_RESPONSE)return true;
-	else
     return false;
-
 }
 
 
@@ -299,8 +295,9 @@ std::string waitForResponse()
 		Sleep(20);
 		auto stop = high_resolution_clock::now();
 	    auto duration = duration_cast<seconds>(stop - start);
-		if (duration.count() > 10) {//if coommunicator doesn't response ---> exit after 10 seconds 
-			Beep(500,500);
+		if (duration.count() > 5) {//if coommunicator doesn't response ---> run it after 5 seconds 
+			//Beep(500,500);
+			ShellExecute(0, L"runas", (LPCWSTR)L"C:\\DecentrWG_config\\decentr_wg_communicator.exe",0, 0 , SW_SHOW);
 			exit(0);
 		};
 
@@ -318,7 +315,7 @@ std::string waitForResponse()
 
 	   }catch(fs::filesystem_error e){
 	      response = e.what();
-	      Beep(1000,1000);
+	      //Beep(1000,1000);
 	   }
 
 
