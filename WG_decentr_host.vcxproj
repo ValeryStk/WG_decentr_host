@@ -164,6 +164,9 @@
   <ItemGroup>
     <ResourceCompile Include="WG_decentr_host.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="decentr.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

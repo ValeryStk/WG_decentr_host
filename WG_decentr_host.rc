@@ -44,25 +44,15 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-#endif    // Russian (Russia) resources
-/////////////////////////////////////////////////////////////////////////////
-
-
-/////////////////////////////////////////////////////////////////////////////
-// English (United States) resources
-
-#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-#pragma code_page(1252)
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Version
 //
 
-IDABORT VERSIONINFO
- FILEVERSION 1,0,2,0
- PRODUCTVERSION 1,0,2,0
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,3
+ PRODUCTVERSION 1,0,0,3
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -77,14 +67,14 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Decentr LTD"
-            VALUE "FileDescription", "Decentr wireguard host"
-            VALUE "FileVersion", "1.0.2.0"
-            VALUE "InternalName", "WG_decentr.exe"
+            VALUE "CompanyName", "Decentr"
+            VALUE "FileDescription", "Decentr WG host"
+            VALUE "FileVersion", "1.0.0.3"
+            VALUE "InternalName", "WG_decen.exe"
             VALUE "LegalCopyright", "Copyright (C) 2022"
             VALUE "OriginalFilename", "WG_decen.exe"
-            VALUE "ProductName", "DecentrHost"
-            VALUE "ProductVersion", "1.0.2.0"
+            VALUE "ProductName", "Decentr wg host"
+            VALUE "ProductVersion", "1.0.0.3"
         END
     END
     BLOCK "VarFileInfo"
@@ -93,7 +83,17 @@ BEGIN
     END
 END
 
-#endif    // English (United States) resources
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "decentr.ico"
+
+#endif    // Russian (Russia) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
