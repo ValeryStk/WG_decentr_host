@@ -15,7 +15,7 @@
 #include "ShellAPI.h"
 #include <chrono>
 using namespace std::chrono;
-
+using std::string;
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
@@ -47,8 +47,8 @@ bool connectToVPN();
 bool isWG_installed();
 bool isVPN_TunnelInstalled();
 
-void writeRequestFile(const std::string &request);
-std::string waitForResponse();
+void writeRequestFile(const string &request);
+string waitForResponse();
 
 
 
@@ -60,7 +60,7 @@ int main()
     unsigned long inLength = 0, outLength = 0;
 
     // in/out message
-    std::string inMessage, outMessage;
+    string inMessage, outMessage;
     std::stringstream outMessage_ss;
     json message;
 
@@ -102,7 +102,7 @@ int main()
         }
         else {
 
-                 if (message["type"].get<std::string>() == "connect"){
+                 if (message["type"].get<string>() == "connect"){
                 
                    // check that json has required parameters              
                 if (message.find("params") == message.end()){
@@ -119,14 +119,14 @@ int main()
                     std::ofstream configFile;
                     configFile.open(CONFIG_PATH);
                     configFile << "[Interface]" << std::endl;
-                    configFile << "PrivateKey = " << params["wgPrivateKey"].get<std::string>() << std::endl;
+                    configFile << "PrivateKey = " << params["wgPrivateKey"].get<string>() << std::endl;
                     configFile << "ListenPort = " << port << std::endl;
-                    configFile << "Address = " << params["ipV4"].get<std::string>() << "/32, " << params["ipV6"].get<std::string>() << "/128" << std::endl;
+                    configFile << "Address = " << params["ipV4"].get<string>() << "/32, " << params["ipV6"].get<string>() << "/128" << std::endl;
                     configFile << "DNS = 10.8.0.1" << std::endl;
                     configFile << "[Peer]" << std::endl;
-                    configFile << "PublicKey = " << params["hostPublicKey"].get<std::string>() << std::endl;
+                    configFile << "PublicKey = " << params["hostPublicKey"].get<string>() << std::endl;
                     configFile << "AllowedIPs = 0.0.0.0/0, ::/0" << std::endl;
-                    configFile << "Endpoint = " << params["host"].get<std::string>() << ":" << params["port"].get<int>() << std::endl;
+                    configFile << "Endpoint = " << params["host"].get<string>() << ":" << params["port"].get<int>() << std::endl;
                     configFile << "PersistentKeepalive = 15" << std::endl;
                     configFile.close();
                    
@@ -138,10 +138,10 @@ int main()
 
                         // create status file
                         json status_js;
-                        status_js["address"] = params["address"].get<std::string>();
+                        status_js["address"] = params["address"].get<string>();
                         status_js["sessionId"] = params["sessionId"].get<int>();
                         status_js["interface"] = "wg98";
-                        status_js["nodeAddress"] = params["nodeAddress"].get<std::string>();
+                        status_js["nodeAddress"] = params["nodeAddress"].get<string>();
                         std::ofstream statusFile;
                         statusFile.open(STATUS_PATH);
                         statusFile << status_js.dump();
@@ -156,16 +156,16 @@ int main()
                     }
                 }
             }
-            else if (message["type"].get<std::string>() == "status")
+            else if (message["type"].get<string>() == "status")
             {
                 
                 if (isVPN_TunnelInstalled())
                 {
                                                        
-                    if (std::filesystem::exists(STATUS_PATH))
+                    if (fs::exists(STATUS_PATH))
                     {
                         std::ifstream statusFile(STATUS_PATH);
-                        std::string line;
+                        string line;
                         if (statusFile.is_open())
                         {
                             std::getline(statusFile, line);
@@ -182,12 +182,12 @@ int main()
                     outMessage_ss << "{\"result\":false}";
                 }
             }
-            else if (message["type"].get<std::string>() == "disconnect")
+            else if (message["type"].get<string>() == "disconnect")
             {
                 
                 if (disconnectActiveConnection())
                 {
-                    std::filesystem::remove(STATUS_PATH);
+                    fs::remove(STATUS_PATH);
                     outMessage_ss << "{\"result\":true}";                  
                 }
                 else {
@@ -196,7 +196,7 @@ int main()
 
                 }
             }
-            else if (message["type"].get<std::string>() == "isWgInstalled") {
+            else if (message["type"].get<string>() == "isWgInstalled") {
             
                 if (isWG_installed())
                 {
@@ -236,15 +236,12 @@ int main()
 	//logFile <<"******************************"<<std::endl<<std::endl;
    // logFile.close();
 
-	//lockStream.close();
-	//fs::remove(mutex_file_path);
-
     return EXIT_SUCCESS;
 }
 
 bool disconnectActiveConnection() {
     
-    std::string result = "";	
+    string result = "";	
     writeRequestFile(UNINSTALL_TUNNEL_COMMAND);
     result = waitForResponse();
 	if(result == UNINSTALLED_RESPONSE) return true;
@@ -254,7 +251,7 @@ bool disconnectActiveConnection() {
 
 bool connectToVPN() {
 
-    std::string result = "";
+    string result = "";
     writeRequestFile(INSTALL_TUNNEL_COMMAND);
 	result = waitForResponse();
     if(result == INSTALLED_RESPONSE) return true;
@@ -272,13 +269,13 @@ bool isWG_installed() {
 bool isVPN_TunnelInstalled(){
    
 	writeRequestFile(WG_SHOW);
-	std::string response = waitForResponse();
+	string response = waitForResponse();
     if (response == INSTALLED_RESPONSE)return true;
     return false;
 }
 
 
-void writeRequestFile(const std::string& request)
+void writeRequestFile(const string& request)
 {
 	std::ofstream requestFile(request_file_path, std::ios::trunc);
 	if(requestFile.is_open()){
@@ -287,7 +284,7 @@ void writeRequestFile(const std::string& request)
 	}
 }
 
-std::string waitForResponse()
+string waitForResponse()
 {
 	auto start = high_resolution_clock::now();
 	while(!fs::exists(response_file)){
@@ -303,7 +300,7 @@ std::string waitForResponse()
 
 	}
     
-	std::string response = "";
+	string response = "";
 	std::ifstream responseFile(response_file);
 	if(responseFile.is_open()){
 	std::getline(responseFile, response);
@@ -317,7 +314,6 @@ std::string waitForResponse()
 	      response = e.what();
 	      //Beep(1000,1000);
 	   }
-
 
 	}
 	
